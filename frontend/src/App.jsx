@@ -14,6 +14,17 @@ const MEME_FILE = {
   angry: "angrycat.png",
 };
 
+const MEME_KEYS = [
+  "staring",
+  "polite",
+  "smiling",
+  "laughing",
+  "judging",
+  "shocked",
+  "scared",
+  "angry",
+];
+
 function MemePreview({ label }) {
   const src = useMemo(() => {
     const file = MEME_FILE[label] || MEME_FILE.staring;
@@ -139,6 +150,11 @@ export default function App() {
         try {
           const out = await matchFace(payload);
           setLabel(out.label);
+          setSeen((prev) => {
+            const next = new Set(prev);
+            next.add(out.label);
+            return next;
+          });
           setConf(out.conf);
         } catch (e) {
           // Backend down or CORS issue: fall back
@@ -156,6 +172,57 @@ export default function App() {
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
   }, [landmarker, baseBrow]);
+
+  const [seen, setSeen] = useState(() => new Set());
+
+  function MemeChecklist({ current, seen }) {
+  return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-white/70">Meme Checklist</p>
+          <span className="text-xs text-white/50">
+            {seen.size}/{MEME_KEYS.length} seen
+          </span>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {MEME_KEYS.map((k) => {
+            const isSeen = seen.has(k);
+            const isCurrent = current === k;
+
+            return (
+              <div
+                key={k}
+                className={[
+                  "flex items-center justify-between rounded-xl border px-3 py-2 text-sm",
+                  isCurrent
+                    ? "border-emerald-400/30 bg-emerald-400/10"
+                    : "border-white/10 bg-black/20",
+                ].join(" ")}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="capitalize">{k}</span>
+                  {isCurrent && (
+                    <span className="text-xs text-emerald-200/80">(now)</span>
+                  )}
+                </div>
+
+                <span className={isSeen ? "text-emerald-300" : "text-white/30"}>
+                  {isSeen ? "✓" : "—"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="mt-3 text-xs text-white/45">
+          Tip: hold an expression for ~0.5s to lock it in.
+        </p>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="min-h-screen bg-[#0b0f19] text-white">
@@ -230,6 +297,7 @@ export default function App() {
           <div className="lg:col-span-2 space-y-6">
             <MemePreview label={label} />
             <ConfidenceBar conf={conf} />
+            <MemeChecklist current={label} seen={seen} />
           </div>
         </div>
 
